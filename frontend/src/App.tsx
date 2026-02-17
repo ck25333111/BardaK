@@ -1,15 +1,19 @@
+//────────────────────────────────────────
+// frontend/src/App.tsx
+// Корневой компонент приложения. Рендерит базовую страницу и форму.
+//────────────────────────────────────────
+
+import { FormBlock } from "./components/FormBlock"
+
 function App() {
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-red-500">
-        Tailwind работает
-      </h1>
-
-      <button className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-        Кнопка React
-      </button>
+    <div className="min-h-screen bg-gray-100 p-10">
+      <div className="mx-auto max-w-xl rounded bg-white p-6 shadow">
+        <h1 className="mb-6 text-2xl font-bold">Три горизонтальных поля</h1>
+        <FormBlock />
+      </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
