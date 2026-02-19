@@ -25,7 +25,7 @@ export function FormBlock() {
   }
 
   const sendToBackend = async (payload: ThreeFieldsPayload) => {
-    const res = await fetch("http://localhost:8000/api/v1/echo", {
+    const res = await fetch("http://localhost:8000/api/v1/dev/echo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
