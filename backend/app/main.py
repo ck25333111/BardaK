@@ -1,15 +1,16 @@
 #────────────────────────────────────────
 # backend/app/main.py
-# FastAPI приложение + тестовый endpoint echo для проверки связки фронт↔бэк
+# Точка входа FastAPI приложения + CORS + подключение роутов v1
 #────────────────────────────────────────
 
-"""FastAPI app entrypoint and simple API endpoints for development."""
+"""FastAPI application entry point."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+
+from app.api.v1.echo import router as echo_router
 
 app = FastAPI(title="BardaK API", version="0.1.0")
 
@@ -21,22 +22,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-class EchoPayload(BaseModel):
-    """Incoming payload from frontend test form."""
-
-    first: str = Field(default="", max_length=500)
-    second: str = Field(default="", max_length=500)
-    third: str = Field(default="", max_length=500)
+app.include_router(echo_router, prefix="/api/v1")
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     """Healthcheck endpoint."""
     return {"status": "ok"}
-
-
-@app.post("/api/v1/echo")
-async def echo(payload: EchoPayload) -> dict[str, object]:
-    """Echo back received payload to confirm frontend-backend connectivity."""
-    return {"ok": True, "received": payload.model_dump()}
