@@ -1,10 +1,11 @@
 /*────────────────────────────────────────
 frontend/src/index.css
-Глобальные стили приложения + подключение Tailwind v4.
-Убираем дефолтный Vite CSS (он ломает layout и цвета).
+Глобальные стили + Tailwind v4 + подключение темы
 ────────────────────────────────────────*/
 
 @import "tailwindcss";
+@import "@/styles/theme/index.css";
+
 
 html,
 body,

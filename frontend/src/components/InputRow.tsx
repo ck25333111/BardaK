@@ -1,37 +1,29 @@
 //────────────────────────────────────────
 // frontend/src/components/InputRow.tsx
-// Одна строка ввода: текстовое поле + кнопка “✓”, вызывает onSubmit.
+// Строка ввода: controlled input + кнопка submit для строки
 //────────────────────────────────────────
-
-import { useState } from "react"
 
 type InputRowProps = {
   placeholder: string
-  onSubmit: (value: string) => void
+  value: string
+  onChange: (value: string) => void
+  onSubmit: () => void
 }
 
-export function InputRow({ placeholder, onSubmit }: InputRowProps) {
-  const [value, setValue] = useState("")
-
-  const handleClick = () => {
-    if (!value.trim()) return
-    onSubmit(value)
-    setValue("")
-  }
-
+export function InputRow({ placeholder, value, onChange, onSubmit }: InputRowProps) {
   return (
     <div className="flex items-center gap-3">
       <input
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="flex-1 rounded border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 rounded border border-gray-300 px-3 py-2 text-white-900 caret-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
       />
 
       <button
         type="button"
-        onClick={handleClick}
+        onClick={onSubmit}
         className="h-10 w-10 rounded bg-blue-600 text-white transition hover:bg-blue-700"
       >
         ✓

@@ -1,9 +1,27 @@
+//────────────────────────────────────────
+// frontend/vite.config.ts
+// Конфиг Vite:
+// - plugins: React (jsx/tsx, fast refresh) + Tailwind v4
+// - resolve.alias: алиас "@" -> "./src" чтобы не писать ../../../
+//────────────────────────────────────────
 
-import { defineConfig } from 'vite'
-// import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
+import path from "node:path"
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [
+    // Нужен для React/TSX: корректная обработка JSX/TSX + Fast Refresh
+    react(),
+
+    // Tailwind v4 через Vite-плагин (как у тебя уже было)
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      // Теперь можно: import x from "@/shared/..."
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 })
