@@ -4,7 +4,7 @@
 //────────────────────────────────────────
 
 import { useState } from "react"
-import { InputRow } from "./InputRow"
+import { InputRow } from "@/components/InputRow"
 
 type ThreeFieldsPayload = {
   first: string

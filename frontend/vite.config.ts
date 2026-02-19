@@ -15,7 +15,7 @@ export default defineConfig({
     // Нужен для React/TSX: корректная обработка JSX/TSX + Fast Refresh
     react(),
 
-    // Tailwind v4 через Vite-плагин (как у тебя уже было)
+    // Tailwind v4 через Vite-плагин
     tailwindcss(),
   ],
   resolve: {
