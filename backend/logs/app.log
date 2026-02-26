@@ -1,0 +1,5 @@
+{"time": "2026-02-26T22:35:45", "level": "INFO", "logger": "app", "message": "dev.echo: payload received", "request_id": "0c7278d0-2ba0-4eee-8a0b-32e5ad0a0e16"}
+{"time": "2026-02-26T22:44:36", "level": "INFO", "logger": "app", "message": "dev.echo: payload received", "request_id": "4b9f5116-c951-4624-acf9-5bb81be74f52"}
+{"time": "2026-02-26T22:58:41", "level": "INFO", "logger": "app.access", "message": "request completed", "request_id": "1dd9d8b3-3ced-4510-9039-979651bdd534", "taskName": "Task-4", "method": "OPTIONS", "path": "/api/v1/dev/echo", "status_code": 200, "duration_ms": 0}
+{"time": "2026-02-26T22:58:42", "level": "INFO", "logger": "app", "message": "dev.echo: payload received", "request_id": "84129869-83f6-4647-8679-470b87a1d5fa", "taskName": "starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro"}
+{"time": "2026-02-26T22:58:42", "level": "INFO", "logger": "app.access", "message": "request completed", "request_id": "84129869-83f6-4647-8679-470b87a1d5fa", "taskName": "Task-5", "method": "POST", "path": "/api/v1/dev/echo", "status_code": 200, "duration_ms": 2}

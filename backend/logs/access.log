@@ -1,0 +1,2 @@
+{"time": "2026-02-26T22:58:41", "level": "INFO", "logger": "app.access", "message": "request completed", "request_id": "1dd9d8b3-3ced-4510-9039-979651bdd534", "taskName": "Task-4", "method": "OPTIONS", "path": "/api/v1/dev/echo", "status_code": 200, "duration_ms": 0}
+{"time": "2026-02-26T22:58:42", "level": "INFO", "logger": "app.access", "message": "request completed", "request_id": "84129869-83f6-4647-8679-470b87a1d5fa", "taskName": "Task-5", "method": "POST", "path": "/api/v1/dev/echo", "status_code": 200, "duration_ms": 2}

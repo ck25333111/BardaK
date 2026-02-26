@@ -1,20 +1,25 @@
 #────────────────────────────────────────
 # backend/app/core/logging.py
 # Единый конфиг логирования: JSON/текст, уровни, формат, request_id из contextvars
+# + запись в файл (RotatingFileHandler) с ротацией
+# + отдельный access-лог (запросы) в logs/access.log
 #────────────────────────────────────────
 
 """Centralized logging configuration.
 
 Цели:
 - Один конфиг на всё приложение (не размазываем logging.basicConfig по файлам)
-- Структурные JSON-логи (проще читать/парсить, позже можно писать в БД/ELK)
+- Структурные JSON-логи
 - request_id подтягивается автоматически из contextvars
+- Логи пишутся в консоль и в файл (с ротацией)
+- Отдельный access-лог для запросов (method/path/status/duration/request_id)
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from logging.config import dictConfig
 from typing import Any
@@ -23,25 +28,38 @@ from app.core.request_context import REQUEST_ID
 
 
 class RequestIdFilter(logging.Filter):
-    """Inject request_id into each log record.
-
-    request_id берём из contextvars (REQUEST_ID). Это работает и в async.
-    """
+    """Inject request_id into each log record via contextvars."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        request_id: str | None = REQUEST_ID.get()  # request_id текущего запроса или None
-        record.request_id = request_id  # type: ignore[attr-defined]  # добавляем поле в record
+        record.request_id = REQUEST_ID.get()  # type: ignore[attr-defined]
         return True
 
 
 class JsonFormatter(logging.Formatter):
-    """Formats log records as compact JSON.
+    """Formats log records as compact JSON (including extra fields)."""
 
-    Это удобно:
-    - читать в консоли
-    - складывать в файл
-    - позже грузить в Postgres/Elastic и т.д.
-    """
+    _STANDARD_ATTRS: set[str] = {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "processName",
+        "process",
+    }
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -52,62 +70,93 @@ class JsonFormatter(logging.Formatter):
             "request_id": getattr(record, "request_id", None),
         }
 
-        # Если есть exception — добавим stacktrace
+        # stacktrace если есть exception
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
+
+        # ВАЖНО: добавляем любые extra-поля (method/path/status/duration и т.д.)
+        for key, value in record.__dict__.items():
+            if key in self._STANDARD_ATTRS:
+                continue
+            if key in payload:
+                continue
+            payload[key] = value
 
         return json.dumps(payload, ensure_ascii=False)
 
 
-def configure_logging(*, log_level: str = "INFO", json_logs: bool = True) -> None:
-    """Configure logging once, at application startup.
+def configure_logging(
+    *,
+    log_level: str = "INFO",
+    json_logs: bool = True,
+    log_to_file: bool = True,
+    log_file_path: str = "logs/app.log",
+    access_log_path: str = "logs/access.log",
+) -> None:
+    """Configure logging once, at application startup."""
+    if log_to_file:
+        os.makedirs(os.path.dirname(log_file_path) or ".", exist_ok=True)
+        os.makedirs(os.path.dirname(access_log_path) or ".", exist_ok=True)
 
-    Args:
-        log_level: Уровень логов ("DEBUG", "INFO", "WARNING"...).
-        json_logs: True -> JSON формат, False -> человекочитаемый текст.
-    """
-    #────────────────────────────────────────
-    # Handlers: куда пишем логи (пока только консоль)
-    #────────────────────────────────────────
     handlers: dict[str, Any] = {
         "console": {
             "class": "logging.StreamHandler",
             "stream": sys.stdout,
             "level": log_level,
-            "filters": ["request_id"],  # request_id добавится в каждый лог
+            "filters": ["request_id"],
             "formatter": "json" if json_logs else "text",
         }
     }
 
-    #────────────────────────────────────────
-    # Formatters: как выглядят логи
-    #────────────────────────────────────────
+    if log_to_file:
+        handlers["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": log_file_path,
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "level": log_level,
+            "filters": ["request_id"],
+            "formatter": "json" if json_logs else "text",
+        }
+        # отдельный файл под access (запросы)
+        handlers["access_file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": access_log_path,
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "level": log_level,
+            "filters": ["request_id"],
+            "formatter": "json" if json_logs else "text",
+        }
+
     formatters: dict[str, Any] = {
         "text": {
             "format": "%(asctime)s | %(levelname)s | %(name)s | request_id=%(request_id)s | %(message)s"
         },
-        "json": {
-            "()": "app.core.logging.JsonFormatter",
-        },
+        "json": {"()": "app.core.logging.JsonFormatter"},
     }
 
-    #────────────────────────────────────────
-    # dictConfig: единая точка конфигурации logging
-    #────────────────────────────────────────
+    root_handlers: list[str] = ["console"]
+    if log_to_file:
+        root_handlers.append("file")
+
     dictConfig(
         {
             "version": 1,
             "disable_existing_loggers": False,
-            "filters": {
-                "request_id": {
-                    "()": "app.core.logging.RequestIdFilter",
-                }
-            },
+            "filters": {"request_id": {"()": "app.core.logging.RequestIdFilter"}},
             "formatters": formatters,
             "handlers": handlers,
-            "root": {"level": log_level, "handlers": ["console"]},
+            "root": {"level": log_level, "handlers": root_handlers},
             "loggers": {
-                # uvicorn.* тоже логируем, но не даём им жить отдельно от общей системы
+                # Отдельный логгер для access-логов (чтобы не мешать с app.log)
+                "app.access": {
+                    "level": log_level,
+                    "handlers": (["access_file"] if log_to_file else []),
+                    "propagate": True,  # в консоль тоже уйдёт через root
+                },
                 "uvicorn": {"level": log_level},
                 "uvicorn.error": {"level": log_level},
                 "uvicorn.access": {"level": log_level},

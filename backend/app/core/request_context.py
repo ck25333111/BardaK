@@ -17,3 +17,4 @@ from contextvars import ContextVar
 
 # request_id живёт в контексте текущего запроса (async-friendly)
 REQUEST_ID: ContextVar[str | None] = ContextVar("REQUEST_ID", default=None)
+
