@@ -26,7 +26,7 @@ from app.core.request_id import RequestContextMiddleware
 from app.core.settings import get_settings  # # наш Settings (env/.env)
 
 
-from app.core.db import check_db_connection  # # проверка доступности БД
+from app.db.session import check_db_connection  # # проверка доступности БД
 
 #────────────────────────────────────────
 # Settings: читаем env/.env ОДИН РАЗ
