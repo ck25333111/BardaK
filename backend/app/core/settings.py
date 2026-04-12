@@ -1,222 +1,176 @@
 #────────────────────────────────────────
 # backend/app/core/settings.py
-# Настройки приложения (env/.env) через pydantic-settings.
+# Настройки приложения через pydantic-settings:
+# - единый источник конфигурации
+# - чтение env и backend/.env
+# - валидация обязательных параметров на старте
 #────────────────────────────────────────
 
-"""Модуль настроек приложения.
+"""Настройки приложения BardaK.
 
-- все конфиги в одном месте (а не os.getenv() по всему проекту)
-- типы и валидация (чтобы ловить херню сразу при старте)
-- загрузка из .env без костылей
-
+Задачи этого модуля:
+- хранить все настройки в одном месте
+- читать переменные окружения и backend/.env
+- валидировать конфиг сразу при старте приложения
+- не допускать размазывания os.getenv() по проекту
 """
+
+from __future__ import annotations
 
 #────────────────────────────────────────
 # Импорты
 #────────────────────────────────────────
 
-from __future__ import annotations  # noqa: D401 
+# # Path нужен, чтобы жёстко и стабильно найти backend/.env
 from pathlib import Path
-from functools import lru_cache  # # кэшируем settings(), чтобы не пересоздавать объект на каждый импорт
-from typing import Final, Literal  # # Literal — чтобы ограничить APP_ENV; Final — константы
 
-from pydantic import Field  # # Field — задаём дефолты/описания/алиасы
-from pydantic_settings import BaseSettings, SettingsConfigDict  # # BaseSettings читает env/.env автоматически
+# # lru_cache нужен, чтобы объект settings создавался один раз
+from functools import lru_cache
+
+# # Final для констант, Literal для ограничения допустимых значений APP_ENV
+from typing import Final, Literal
+
+# # Field описывает поля настроек
+from pydantic import Field
+
+# # BaseSettings и SettingsConfigDict дают чтение env/.env
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 #────────────────────────────────────────
 # Константы
 #────────────────────────────────────────
 
-DEFAULT_LOG_LEVEL: Final[str] = "INFO"  # # дефолтный уровень логов (можно переопределить через env)
+# # Дефолтный уровень логов
+DEFAULT_LOG_LEVEL: Final[str] = "INFO"
+
+# # Абсолютный путь до backend/.env
+ENV_FILE_PATH: Final[Path] = Path(__file__).resolve().parents[2] / ".env"
 
 
 #────────────────────────────────────────
-# Settings: единый источник конфигурации
+# Основной класс настроек
 #────────────────────────────────────────
 
 class Settings(BaseSettings):
-    """Главный контейнер настроек приложения.
+    """Единый источник настроек приложения.
 
-    ВАЖНО:
-    - Это единственный источник правды по конфигу.
-    - Никаких os.getenv() в роутерах/сервисах/репозиториях.
-    - Настройки читаются из env + backend/.env.
+    Правила:
+    - настройки читаются из переменных окружения и файла backend/.env
+    - обязательные параметры должны быть заданы явно
+    - проект не использует os.getenv() напрямую в бизнес-коде
     """
 
     #────────────────────────────────────────
-    # Конфиг pydantic-settings (как читать .env и env)
+    # Конфиг pydantic-settings
     #────────────────────────────────────────
 
     model_config = SettingsConfigDict(
-        # # ЖЁСТКО указываем путь к backend/.env, чтобы не зависеть от того,
-        # # откуда ты запускаешь uvicorn (из корня проекта или из backend).
-        env_file=str(Path(__file__).resolve().parents[2] / ".env"),
-        env_file_encoding="utf-8",  # # кодировка файла .env
-        case_sensitive=False,       # # APP_ENV и app_env — считаем одинаковыми (удобно)
-        extra="ignore",             # # лишние ключи в .env не ломают запуск
+        # # Жёстко указываем путь до backend/.env,
+        # # чтобы запуск работал одинаково из разных директорий
+        env_file=str(ENV_FILE_PATH),
+
+        # # Кодировка .env
+        env_file_encoding="utf-8",
+
+        # # APP_ENV и app_env считаем одинаковыми
+        case_sensitive=False,
+
+        # # Лишние переменные не должны ломать запуск
+        extra="ignore",
     )
 
     #────────────────────────────────────────
-    # Базовые параметры приложения
+    # Базовые настройки приложения
     #────────────────────────────────────────
 
+    # # Среда запуска приложения
     app_env: Literal["dev", "test", "prod"] = Field(
-        default="dev",               # # дефолт: dev (удобно локально)
-        alias="APP_ENV",             # # имя переменной окружения
-        description="Среда запуска приложения: dev/test/prod",  # # для читаемости
+        default="dev",
+        alias="APP_ENV",
+        description="Среда запуска приложения: dev/test/prod",
     )
 
+    # # Уровень логирования
     log_level: str = Field(
-        default="INFO",              # # дефолтный уровень логов (безопасный)
-        alias="LOG_LEVEL",           # # переменная окружения
-        description="Уровень логирования: DEBUG/INFO/WARNING/ERROR",  # # подсказка
+        default=DEFAULT_LOG_LEVEL,
+        alias="LOG_LEVEL",
+        description="Уровень логирования: DEBUG/INFO/WARNING/ERROR",
     )
 
     #────────────────────────────────────────
-    # База данных
+    # Настройки БД
     #────────────────────────────────────────
 
+    # # DATABASE_URL обязателен.
+    # # Если его нет, приложение должно упасть сразу при старте.
     database_url: str = Field(
-        # # ВАЖНО: тут НЕТ default="" — значит поле ОБЯЗАТЕЛЬНОЕ.
-        # # Если DATABASE_URL не задан, pydantic-settings кинет ошибку уже на старте.
-        alias="DATABASE_URL",        # # переменная окружения
-        description="DSN для БД (ОЖИДАЕМ: postgresql+asyncpg://...)",  # # ожидаемый формат
+        alias="DATABASE_URL",
+        description="DSN для БД. Ожидается формат: postgresql+asyncpg://...",
     )
 
     #────────────────────────────────────────
-    # Удобные хелперы (свойства)
+    # Удобные вычисляемые свойства
     #────────────────────────────────────────
 
     @property
     def is_prod(self) -> bool:
-        """Проверка: это прод?
+        """Проверить, запущено ли приложение в production.
 
         Returns:
-            bool: True если APP_ENV=prod, иначе False.
+            bool: True, если APP_ENV == "prod", иначе False.
         """
-        return self.app_env == "prod"  # # простая проверка среды
+        # # Простая проверка окружения
+        return self.app_env == "prod"
 
     @property
     def alembic_database_url(self) -> str:
-        """DSN для Alembic (синхронный).
+        """Получить sync DSN для Alembic.
 
-        Почему так:
-        - Alembic часто гоняют синхронно.
-        - Приложение использует asyncpg.
-        - Поэтому для миграций меняем asyncpg -> psycopg.
+        Приложение использует asyncpg:
+        - postgresql+asyncpg://...
+
+        Для миграций Alembic удобнее использовать psycopg:
+        - postgresql+psycopg://...
 
         Returns:
-            str: строка подключения для миграций.
+            str: строка подключения для Alembic.
         """
-        # # Преобразуем asyncpg -> psycopg (psycopg3)
-        # # Пример:
-        # # postgresql+asyncpg://... -> postgresql+psycopg://...
+        # # Преобразуем asyncpg DSN в psycopg DSN для миграций
         return self.database_url.replace(
-            "postgresql+asyncpg://",  # # что заменяем
-            "postgresql+psycopg://",  # # на что заменяем
+            "postgresql+asyncpg://",
+            "postgresql+psycopg://",
         )
-    """Главный контейнер настроек приложения.
-
-    ВАЖНО:
-    - Это единственный источник правды по конфигу.
-    - Никаких os.getenv() в роутерах/сервисах/репозиториях.
-    """
-
-    #────────────────────────────────────────
-    # Конфиг pydantic-settings (как читать .env и env)
-    #────────────────────────────────────────
-
-    model_config = SettingsConfigDict(
-        env_file=".env",               # # файл окружения (в корне backend/ обычно)
-        env_file_encoding="utf-8",      # # кодировка .env
-        case_sensitive=False,           # # APP_ENV и app_env — одно и то же (удобно на разных ОС)
-        extra="ignore",                # # если в .env есть лишние ключи — не падаем
-    )
-
-    #────────────────────────────────────────
-    # Базовые параметры приложения
-    #────────────────────────────────────────
-
-    app_env: Literal["dev", "test", "prod"] = Field(
-        default="dev",                 # # дефолт: dev
-        alias="APP_ENV",               # # имя переменной окружения
-        description="Среда запуска приложения: dev/test/prod",  # # чисто для читаемости/доков
-    )
-
-    log_level: str = Field(
-        default=DEFAULT_LOG_LEVEL,     # # дефолтный уровень логов
-        alias="LOG_LEVEL",             # # переменная окружения
-        description="Уровень логирования: DEBUG/INFO/WARNING/ERROR",  # # подсказка
-    )
-
-    #────────────────────────────────────────
-    # База данных
-    #────────────────────────────────────────
-
-    database_url: str = Field(
-        default="",                    # # пусто по умолчанию, чтобы не “случайно подключиться” неизвестно куда
-        alias="DATABASE_URL",          # # переменная окружения
-        description="DSN для БД (ОЖИДАЕМ: postgresql+asyncpg://...)",  # # ожидаемый формат
-    )
-
-    #────────────────────────────────────────
-    # Удобные хелперы (свойства)
-    #────────────────────────────────────────
-
-    @property
-    def is_prod(self) -> bool:
-        """Проверка: это прод?
-
-        Returns:
-            bool: True если APP_ENV=prod, иначе False.
-        """
-        return self.app_env == "prod"  # # простая проверка среды
-
-    @property
-    def alembic_database_url(self) -> str:
-        """DSN для Alembic (синхронный).
-
-        Почему так:
-        - Alembic по умолчанию работает синхронно.
-        - Мы в приложении используем asyncpg, но миграции часто проще гонять синхронно.
-
-        Как делаем:
-        - если DSN вида postgresql+asyncpg://..., превращаем в postgresql+psycopg://...
-        - если DSN уже синхронный — возвращаем как есть
-
-        Returns:
-            str: строка подключения для миграций.
-        """
-        # # если пользователь вообще не задал DATABASE_URL — отдаём пустую строку (потом упадём с понятной ошибкой)
-        if not self.database_url:
-            return ""
-
-        # # преобразуем asyncpg -> psycopg (psycopg3)
-        return self.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
 
 
 #────────────────────────────────────────
-# Factory: единый экземпляр настроек
+# Фабрика настроек
 #────────────────────────────────────────
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Вернуть единый экземпляр Settings (кэшируем).
+    """Создать и вернуть единый экземпляр настроек.
 
-    Зачем кэш:
+    Почему через кэш:
     - настройки читаются один раз
-    - любые импорты get_settings() получают один и тот же объект
+    - все импорты получают один и тот же объект
+    - нет лишнего повторного создания Settings()
 
     Returns:
-        Settings: объект настроек приложения.
+        Settings: объект конфигурации приложения.
+
+    Raises:
+        ValueError: если DATABASE_URL имеет неверный формат.
     """
-    settings = Settings()  # # создаём settings (pydantic-settings сам прочитает env/.env)
-    # # минимальная валидация руками: убеждаемся, что DSN под async SQLAlchemy правильный
-    if settings.database_url and not settings.database_url.startswith("postgresql+asyncpg://"):
-        # # падаем сразу при старте — лучше, чем ловить странные ошибки при подключении к БД
+    # # Создаём объект настроек
+    settings = Settings()
+
+    # # Проверяем, что DSN подходит для async SQLAlchemy
+    if not settings.database_url.startswith("postgresql+asyncpg://"):
         raise ValueError(
             "DATABASE_URL должен начинаться с 'postgresql+asyncpg://'. "
             "Пример: postgresql+asyncpg://user:pass@localhost:5432/bardak"
         )
-    return settings  # # отдаём кэшируемый объект
+
+    # # Возвращаем кэшируемый объект
+    return settings
