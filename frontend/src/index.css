@@ -1,0 +1,18 @@
+/*────────────────────────────────────────
+frontend/src/index.css
+Глобальные стили + Tailwind v4 + подключение темы
+────────────────────────────────────────*/
+
+@import "tailwindcss";
+@import "@/styles/theme/index.css";
+
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}

@@ -1,0 +1,13 @@
+/*────────────────────────────────────────
+frontend/src/styles/theme/light.css
+Светлая тема (заготовка)
+────────────────────────────────────────*/
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #ffffff;
+  color: #111827;
+}
