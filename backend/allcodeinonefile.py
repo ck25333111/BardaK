@@ -1,5 +1,5 @@
 # ────────────────────────────────────────────────────────────────
-# Путь: tools/export_project_snapshot.py
+# Путь: tools/export_backend_project_snapshot.py
 # Описание: Скрипт рекурсивно обходит директорию проекта, собирает
 #           содержимое текстовых файлов с кодом и сохраняет всё
 #           в один итоговый файл для анализа архитектуры проекта.
@@ -417,7 +417,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output",
         type=str,
-        default="project_snapshot.txt",
+        default="backend_backend_project_snapshot.txt",
         help="Путь к итоговому txt-файлу.",
     )
 
