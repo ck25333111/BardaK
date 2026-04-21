@@ -21,7 +21,7 @@ from app.services.location.exceptions import LocationHasChildrenError
 from app.services.location.exceptions import LocationParentNotFoundError
 from app.services.location.exceptions import LocationSelfParentError
 
-
+ 
 async def validate_parent_exists(
     repository: LocationRepository,
     parent_id: int | None,
