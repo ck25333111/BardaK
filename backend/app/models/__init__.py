@@ -4,24 +4,18 @@
 #           Центральная точка импорта моделей.
 # ────────────────────────────────────────────────────────────────
 
-"""Пакет ORM-моделей проекта BardaK.
-
-Назначение:
-- собрать модели в одном месте
-- упростить импорт в Alembic и других модулях
-- зафиксировать структуру слоя models
-"""
+"""Пакет ORM-моделей проекта BardaK."""
 
 from __future__ import annotations
 
-# Базовый класс всех ORM-моделей
 from app.models.base import Base
-
-# Модель места хранения
+from app.models.category import Category
+from app.models.item import Item
 from app.models.location import Location
 
-# Экспортируем публичный интерфейс пакета
 __all__: list[str] = [
     "Base",
+    "Category",
+    "Item",
     "Location",
 ]

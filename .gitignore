@@ -23,5 +23,5 @@ frontend/.vite/
 Thumbs.db
 
 
-# logs
-*.log
+# # logs
+# *.log
