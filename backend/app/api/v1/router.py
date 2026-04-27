@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.dev import router as dev_router
+from app.api.v1.locations import router as locations_router
 
 router = APIRouter()
 
@@ -17,3 +18,8 @@ router = APIRouter()
 # Dev endpoints (временные/отладочные)
 #────────────────────────────────────────
 router.include_router(dev_router, prefix="/dev")
+
+#────────────────────────────────────────
+# Location endpoints
+#────────────────────────────────────────
+router.include_router(locations_router)
