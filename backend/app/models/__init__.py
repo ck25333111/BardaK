@@ -17,11 +17,19 @@ from __future__ import annotations
 # Базовый класс всех ORM-моделей
 from app.models.base import Base
 
+# Модель категории предметов
+from app.models.category import Category
+
+# Модель предмета
+from app.models.item import Item
+
 # Модель места хранения
 from app.models.location import Location
 
 # Экспортируем публичный интерфейс пакета
 __all__: list[str] = [
     "Base",
+    "Category",
+    "Item",
     "Location",
 ]
