@@ -2,17 +2,19 @@
 # Путь: backend/app/models/location.py
 # Описание: ORM-модель Location.
 #           Описывает универсальный узел хранения:
-#           мебель, секцию, ящик, ячейку, полку, коробку и т.д.
+#           дом, комнату, шкаф, секцию, ящик, полку, ячейку и т.д.
 # ────────────────────────────────────────────────────────────────
 
 """ORM-модель места хранения для проекта BardaK.
 
 Идея модели:
 - Location — это универсальная сущность хранения
-- одна и та же модель описывает шкаф, стол, ящик, ячейку, полку и т.д.
-- вложенность строится через parent_id
+- одна и та же модель описывает любой физический узел хранения
+- вложенность строится через self-reference по parent_id
 
 Примеры:
+- Дом
+- Спальня
 - Стол
 - Ящик 1
 - Ячейка A1
@@ -22,11 +24,8 @@
 
 from __future__ import annotations
 
-# Импорт datetime для хранения времени создания записи
+# Импорт datetime для хранения временных меток записи
 from datetime import datetime
-
-# Импорт Optional для nullable-ссылок
-from typing import Optional
 
 # Импорт функций и типов SQLAlchemy
 from sqlalchemy import DateTime
@@ -36,6 +35,7 @@ from sqlalchemy import String
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import relationship
 
 # Импорт базового класса всех ORM-моделей проекта
 from app.models.base import Base
@@ -49,13 +49,20 @@ class Location(Base):
     - позволять описывать мебель и вложенные контейнеры
     - быть фундаментом для дальнейшей привязки предметов
 
+    Важно:
+    - сама модель описывает только узел дерева
+    - параметры внутренней раскладки будут вынесены
+      в отдельную сущность LocationLayout
+
     Примеры узлов:
+    - дом
+    - комната
     - шкаф
     - секция
     - ящик
+    - полка
     - ячейка
     - коробка
-    - полка
     """
 
     # Явное имя таблицы в БД
@@ -82,6 +89,8 @@ class Location(Base):
     # Пока строкой, без Enum, чтобы не зацементировать
     # набор значений слишком рано.
     # Примеры:
+    # - "house"
+    # - "room"
     # - "table"
     # - "drawer"
     # - "cell"
@@ -95,7 +104,7 @@ class Location(Base):
     # Ссылка на родительский Location.
     # Нужна для построения дерева хранения.
     # Если parent_id = None, значит это корневой узел.
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("locations.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -103,19 +112,19 @@ class Location(Base):
     # Ширина места хранения в миллиметрах.
     # Пока nullable, потому что не для всех узлов размеры
     # будут известны на старте.
-    width_mm: Mapped[Optional[int]] = mapped_column(
+    width_mm: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
     # Глубина места хранения в миллиметрах.
-    depth_mm: Mapped[Optional[int]] = mapped_column(
+    depth_mm: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
     # Высота места хранения в миллиметрах.
-    height_mm: Mapped[Optional[int]] = mapped_column(
+    height_mm: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
@@ -124,7 +133,7 @@ class Location(Base):
     # Можно хранить заметки:
     # - "верхние ячейки длиннее нижних"
     # - "внутри стоят перегородки"
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         String(1000),
         nullable=True,
     )
@@ -135,4 +144,28 @@ class Location(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    # Время последнего обновления записи.
+    # Обновляется на стороне БД автоматически при изменении строки.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # ORM-ссылка на родительский узел дерева.
+    # Нужна для удобной навигации вверх по иерархии.
+    parent: Mapped[Location | None] = relationship(
+        "Location",
+        remote_side="Location.id",
+        back_populates="children",
+    )
+
+    # ORM-ссылка на дочерние узлы дерева.
+    # Нужна для построения структуры хранения вниз по иерархии.
+    children: Mapped[list[Location]] = relationship(
+        "Location",
+        back_populates="parent",
     )
