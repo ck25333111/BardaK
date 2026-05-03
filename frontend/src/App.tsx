@@ -3,10 +3,10 @@
 // Корневой компонент приложения BardaK.
 //────────────────────────────────────────
 
-import { CategoriesPage } from "@/pages/categories/CategoriesPage"
+import { LocationsPage } from "@/pages/locations/LocationsPage"
 
 function App() {
-  return <CategoriesPage />
+  return <LocationsPage />
 }
 
 export default App

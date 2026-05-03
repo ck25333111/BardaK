@@ -6,5 +6,6 @@
 export { Button } from "./Button"
 export { Card } from "./Card"
 export { Page } from "./Page"
+export { Select } from "./Select"
 export { Textarea } from "./Textarea"
 export { TextInput } from "./TextInput"
